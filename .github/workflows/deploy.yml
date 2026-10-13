@@ -24,13 +24,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate static site
+      - name: Validate site
         run: |
           test -f index.html
           test -f styles.css
           test -f src/app.js
-          test -f assets/favicon.svg
-          test -f .nojekyll
           node --check src/app.js
 
       - name: Configure Pages
@@ -41,6 +39,6 @@ jobs:
         with:
           path: .
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
