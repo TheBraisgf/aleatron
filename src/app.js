@@ -129,8 +129,11 @@ async function generate() {
   let results = await Promise.all(selected.map(pull));
   let successful = results.filter(r => r.ok && r.value);
   if (successful.length < 2) {
-    const extras = shuffle(SOURCES.filter(s => !selected.includes(s))).slice(0, 4);
-    results = results.concat(await Promise.all(extras.map(pull)));
+    // Retry failed choices with fresh endpoints from sources that have not been queried yet.
+    const alreadyTried = new Set(results.map(r => r.source.id));
+    const extras = shuffle(SOURCES.filter(s => !alreadyTried.has(s.id))).slice(0, 5);
+    const retries = await Promise.all(extras.map(pull));
+    results = results.concat(retries);
     successful = results.filter(r => r.ok && r.value);
   }
   state.lastResults = results; state.count++;
