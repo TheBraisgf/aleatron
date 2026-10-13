@@ -97,8 +97,15 @@ function updateSourceTiles(results = []) {
 function renderIdea(idea) {
   $("#idea-number").textContent = "TIRADA #" + String(state.count).padStart(3, "0");
   $("#idea-tags").innerHTML = idea.tags.map(tag => "<span>" + escapeText(tag) + "</span>").join("") + "<span>" + idea.absurdity + "% ABSURDO</span>";
-  $("#idea-title").textContent = idea.title;
-  $("#idea-title").innerHTML = escapeText(idea.title).replace(": ", ":<br><em>") + (idea.title.includes(": ") ? "</em>" : "");
+  const titleParts = idea.title.split(": ");
+  $("#idea-title").replaceChildren();
+  $("#idea-title").append(document.createTextNode(titleParts[0]));
+  if (titleParts.length > 1) {
+    $("#idea-title").append(document.createElement("br"));
+    const emphasis = document.createElement("em");
+    emphasis.textContent = titleParts.slice(1).join(": ");
+    $("#idea-title").append(emphasis);
+  }
   $("#idea-description").textContent = idea.description;
   $("#idea-footnote").textContent = "FUENTES USADAS: " + idea.sources.join(" · ").toUpperCase();
   $("#idea-doodle").textContent = rand(["✳", "↯", "☻", "※", "✷", "⊹", "?!", "∞"]);
