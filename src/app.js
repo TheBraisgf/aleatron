@@ -1,235 +1,84 @@
 const API_TIMEOUT = 8500;
 const TRANSLATE_TIMEOUT = 6000;
-const $ = (selector) => document.querySelector(selector);
+const $ = selector => document.querySelector(selector);
 
 const SOURCES = [
-  { id: "useless-facts", name: "Useless Facts", kind: "Dato curioso", icon: "?!", lang: "en", url: "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en", docs: "https://uselessfacts.jsph.pl/", parse: r => r.text },
-  { id: "cat-facts", name: "Cat Facts", kind: "Datos de gatos", icon: "↗", lang: "en", url: "https://catfact.ninja/fact", docs: "https://catfact.ninja/", parse: r => r.fact },
-  { id: "dog-facts", name: "Dog Facts", kind: "Datos de perros", icon: "⌁", lang: "en", url: "https://dogapi.dog/api/v2/facts", docs: "https://dogapi.dog/", parse: r => r.data?.[0]?.attributes?.body || r.fact },
-  { id: "pokeapi", name: "PokéAPI", kind: "Pokémon", icon: "◉", lang: "es", url: () => `https://pokeapi.co/api/v2/pokemon/${1 + Math.floor(Math.random() * 1025)}`, docs: "https://pokeapi.co/", parse: r => prettify(r.name) },
-  { id: "official-joke", name: "Official Joke API", kind: "Chistes", icon: "☻", lang: "en", url: "https://official-joke-api.appspot.com/random_joke", docs: "https://github.com/15Dkatz/official_joke_api", parse: r => [r.setup, r.punchline].filter(Boolean).join(" — ") },
-  { id: "jokeapi", name: "JokeAPI", kind: "Humor", icon: "↯", lang: "en", url: "https://v2.jokeapi.dev/joke/Any?blacklistFlags=nsfw,racist,sexist,explicit&type=single", docs: "https://jokeapi.dev/", parse: r => r.joke || [r.setup, r.delivery].filter(Boolean).join(" — ") },
-  { id: "chucknorris", name: "Chuck Norris Facts", kind: "Leyenda urbana", icon: "★", lang: "en", url: "https://api.chucknorris.io/jokes/random", docs: "https://api.chucknorris.io/", parse: r => r.value },
-  { id: "ron-swanson", name: "Ron Swanson Quotes", kind: "Filosofía de bar", icon: "☕", lang: "en", url: "https://ron-swanson-quotes.herokuapp.com/v2/quotes", docs: "https://github.com/jamesseanwright/ron-swanson-quotes", parse: r => Array.isArray(r) ? r[0] : r },
-  { id: "boredapi", name: "Bored API", kind: "Actividades", icon: "⌂", lang: "en", url: "https://bored-api.appbrewery.com/random", docs: "https://bored-api.appbrewery.com/", parse: r => r.activity },
-  { id: "random-user", name: "Random User", kind: "Persona ficticia", icon: "☺", lang: "es", url: "https://randomuser.me/api/?nat=es", docs: "https://randomuser.me/", parse: r => { const u = r.results?.[0]; return u ? `${u.name.first} ${u.name.last} de ${u.location.city}` : ""; } },
-  { id: "deckofcards", name: "Deck of Cards", kind: "Carta aleatoria", icon: "♠", lang: "es", url: "https://deckofcardsapi.com/api/deck/new/draw/?count=1", docs: "https://deckofcardsapi.com/", parse: r => { const c = r.cards?.[0]; return c ? `${c.value} de ${suitEs(c.suit)}` : ""; } },
-  { id: "advice-slip", name: "Advice Slip", kind: "Consejo cuestionable", icon: "✎", lang: "en", url: "https://api.adviceslip.com/advice", docs: "https://api.adviceslip.com/", parse: r => r.slip?.advice },
-  { id: "dog-ceo", name: "Dog CEO", kind: "Raza de perro", icon: "♧", lang: "es", url: "https://dog.ceo/api/breeds/list/random", docs: "https://dog.ceo/dog-api/", parse: r => `La raza elegida al azar es ${r.message}.` }
+  { id:"useless-facts", name:"Useless Facts", kind:"Dato curioso", icon:"?!", lang:"en", url:"https://uselessfacts.jsph.pl/api/v2/facts/random?language=en", docs:"https://uselessfacts.jsph.pl/", parse:r=>r.text },
+  { id:"cat-facts", name:"Cat Facts", kind:"Datos de gatos", icon:"↗", lang:"en", url:"https://catfact.ninja/fact", docs:"https://catfact.ninja/", parse:r=>r.fact },
+  { id:"dog-facts", name:"Dog Facts", kind:"Datos de perros", icon:"⌁", lang:"en", url:"https://dogapi.dog/api/v2/facts", docs:"https://dogapi.dog/", parse:r=>r.data?.[0]?.attributes?.body||r.fact },
+  { id:"pokeapi", name:"PokéAPI", kind:"Pokémon", icon:"◉", lang:"es", url:()=>`https://pokeapi.co/api/v2/pokemon/${1+Math.floor(Math.random()*1025)}`, docs:"https://pokeapi.co/", parse:r=>prettify(r.name) },
+  { id:"official-joke", name:"Official Joke API", kind:"Chistes", icon:"☻", lang:"en", url:"https://official-joke-api.appspot.com/random_joke", docs:"https://github.com/15Dkatz/official_joke_api", parse:r=>[r.setup,r.punchline].filter(Boolean).join(" — ") },
+  { id:"jokeapi", name:"JokeAPI", kind:"Humor", icon:"↯", lang:"en", url:"https://v2.jokeapi.dev/joke/Any?blacklistFlags=nsfw,racist,sexist,explicit&type=single", docs:"https://jokeapi.dev/", parse:r=>r.joke||[r.setup,r.delivery].filter(Boolean).join(" — ") },
+  { id:"chucknorris", name:"Chuck Norris Facts", kind:"Leyenda urbana", icon:"★", lang:"en", url:"https://api.chucknorris.io/jokes/random", docs:"https://api.chucknorris.io/", parse:r=>r.value },
+  { id:"ron-swanson", name:"Ron Swanson Quotes", kind:"Filosofía de bar", icon:"☕", lang:"en", url:"https://ron-swanson-quotes.herokuapp.com/v2/quotes", docs:"https://github.com/jamesseanwright/ron-swanson-quotes", parse:r=>Array.isArray(r)?r[0]:r },
+  { id:"boredapi", name:"Bored API", kind:"Actividades", icon:"⌂", lang:"en", url:"https://bored-api.appbrewery.com/random", docs:"https://bored-api.appbrewery.com/", parse:r=>r.activity },
+  { id:"random-user", name:"Random User", kind:"Persona ficticia", icon:"☺", lang:"es", url:"https://randomuser.me/api/?nat=es", docs:"https://randomuser.me/", parse:r=>{const u=r.results?.[0];return u?`${u.name.first} ${u.name.last} de ${u.location.city}`:"";} },
+  { id:"deckofcards", name:"Deck of Cards", kind:"Carta aleatoria", icon:"♠", lang:"es", url:"https://deckofcardsapi.com/api/deck/new/draw/?count=1", docs:"https://deckofcardsapi.com/", parse:r=>{const c=r.cards?.[0];return c?`${c.value} de ${suitEs(c.suit)}`:"";} },
+  { id:"advice-slip", name:"Advice Slip", kind:"Consejo cuestionable", icon:"✎", lang:"en", url:"https://api.adviceslip.com/advice", docs:"https://api.adviceslip.com/", parse:r=>r.slip?.advice },
+  { id:"dog-ceo", name:"Dog CEO", kind:"Raza de perro", icon:"♧", lang:"es", url:"https://dog.ceo/api/breeds/list/random", docs:"https://dog.ceo/dog-api/", parse:r=>`La raza elegida al azar es ${r.message}.` }
 ];
-
-const problems = [
-  "y descubre que alguien ha convertido esto en un trámite oficial.",
-  "pero la burocracia local exige tres copias y un sacrificio simbólico.",
-  "hasta que aparece una persona que asegura haberlo patentado en 1998.",
-  "y el único experto disponible es un señor que ha venido a cambiar el router.",
-  "aunque todo el mundo insiste en que es perfectamente normal.",
-  "justo cuando un comité internacional decide regularlo.",
-  "pero el sindicato correspondiente se niega a colaborar.",
-  "y ahora tiene que explicárselo a su casero.",
-  "hasta que la situación escala por culpa de una impresora.",
-  "pero resulta que el verdadero problema era el formulario número 7B.",
-  "y por alguna razón, todo depende de una votación en una comunidad de vecinos.",
-  "pero el tutorial oficial dura nueve horas y está en un idioma inventado."
-];
-const bridges = ["Por desgracia", "Lo inquietante es que", "El giro es que", "Todo iba más o menos bien hasta que", "Como era de esperar", "La parte ilegal (presuntamente) es que", "Nadie contaba con que"];
-const connectors = ["ha decidido montar una consultora", "se presenta a las elecciones", "quiere ser influencer", "ha heredado una oficina en el infierno", "dirige una secta con newsletter", "exige derechos laborales", "ha abierto una academia online", "está preparando una oposición", "se ha hecho crítico gastronómico", "ha fundado una startup"];
-const endings = ["y nadie ha leído los términos y condiciones.", "con la confianza de quien claramente no ha entendido nada.", "mientras suena una versión de jazz de la sintonía de Windows.", "y la única reseña tiene una estrella y dice «interesante».", "aunque Hacienda ya está al corriente.", "por motivos que un abogado recomendaría no investigar.", "y, sorprendentemente, recibe financiación europea."];
 
 const modeInfo = {
-  caos: { name: "Caos absoluto", hint: "Mezcla libre de datos. El algoritmo no responde ante nadie." },
-  historia: { name: "Premisa de historia", hint: "Convierte los datos en el germen de una historia que alguien debería escribir." },
-  personaje: { name: "Personaje lamentable", hint: "Crea un personaje absurdo con profesión, problema y cero dignidad." },
-  video: { name: "Vídeo / sketch", hint: "Pensado para un vídeo, sketch o idea de contenido que puedas grabar." },
-  mundo: { name: "Mundo imposible", hint: "Construye una sociedad donde esta combinación de datos tiene sentido. Más o menos." },
-  invento: { name: "Invento innecesario", hint: "Diseña un producto absurdo para solucionar un problema que nadie tenía." }
+  caos:{name:"Caos absoluto", short:"Mezcla ideas sin género ni vergüenza.", description:"Genera una idea completa y libre. Ideal cuando solo quieres una premisa inesperada y que el sistema haga el resto.", output:"Ficha libre: título, premisa, elementos, conflicto, giro y final posible."},
+  historia:{name:"Premisa de historia", short:"Te entrega el esqueleto de una historia.", description:"Pensado para escribir una historia, cómic, novela o guion. Une los datos en una premisa narrativa con personajes y conflicto.", output:"Ficha narrativa: título, premisa, protagonista, antagonista, reglas del mundo, conflicto, giro y final posible."},
+  personaje:{name:"Personaje lamentable", short:"Crea un personaje absurdo pero usable.", description:"No genera solo un nombre raro: crea quién es, qué quiere, qué se le da fatal y qué problema arrastra.", output:"Ficha de personaje: identidad, objetivo, profesión, habilidad inútil, defecto, enemigo y arco."},
+  video:{name:"Vídeo / sketch", short:"Una idea que puedes grabar directamente.", description:"Convierte el azar en un formato de contenido: hook, premisa, escenas y remate. Pensado para YouTube, TikTok o un sketch.", output:"Ficha de vídeo: título, hook, premisa, estructura, momentos clave, remate y CTA."},
+  mundo:{name:"Mundo imposible", short:"Construye un universo con reglas propias.", description:"Parte de los datos y crea una sociedad donde todo eso sea normal. Útil para ficción, worldbuilding o ideas de cómic.", output:"Ficha de mundo: concepto, regla principal, sociedad, tecnología/costumbres, conflicto, facciones y giro."},
+  invento:{name:"Invento innecesario", short:"Diseña un producto que nadie pidió.", description:"Mezcla datos reales para inventar un producto absurdo pero suficientemente convincente como para venderlo en un anuncio.", output:"Ficha de producto: nombre, problema, solución, funcionamiento, público, ventaja, defecto y anuncio."}
 };
 
-const state = { count: 0, current: null, loading: false, saved: readSaved(), lastResults: [] };
+const problems=["y descubre que alguien ha convertido esto en un trámite oficial.","pero la burocracia local exige tres copias y un sacrificio simbólico.","hasta que aparece una persona que asegura haberlo patentado en 1998.","y el único experto disponible es un señor que ha venido a cambiar el router.","aunque todo el mundo insiste en que es perfectamente normal.","justo cuando un comité internacional decide regularlo.","pero el sindicato correspondiente se niega a colaborar.","y ahora tiene que explicárselo a su casero.","hasta que la situación escala por culpa de una impresora.","pero resulta que el verdadero problema era el formulario número 7B."];
+const bridges=["Por desgracia","Lo inquietante es que","El giro es que","Todo iba más o menos bien hasta que","Como era de esperar","La parte ilegal (presuntamente) es que","Nadie contaba con que"];
+const connectors=["ha decidido montar una consultora","se presenta a las elecciones","quiere ser influencer","ha heredado una oficina en el infierno","dirige una secta con newsletter","exige derechos laborales","ha abierto una academia online","está preparando una oposición","se ha hecho crítico gastronómico","ha fundado una startup"];
+const endings=["y nadie ha leído los términos y condiciones.","con la confianza de quien claramente no ha entendido nada.","mientras suena una versión de jazz de la sintonía de Windows.","y la única reseña tiene una estrella y dice «interesante».","aunque Hacienda ya está al corriente.","por motivos que un abogado recomendaría no investigar."];
 
-function rand(list) { return list[Math.floor(Math.random() * list.length)]; }
-function shuffle(list) { const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-function prettify(value = "") { return value.replace(/-/g, " ").replace(/\b\w/g, m => m.toUpperCase()); }
-function suitEs(suit = "") { return ({ DIAMONDS: "diamantes", HEARTS: "corazones", SPADES: "picas", CLUBS: "tréboles" })[suit] || suit.toLowerCase(); }
-function escapeText(value) { return String(value ?? "").replace(/[&<>\"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[c]); }
-function trimAt(value, max) { const s = String(value ?? "").trim().replace(/\s+/g, " "); if (s.length <= max) return s; const part = s.slice(0, max - 1); const cut = part.lastIndexOf(" "); return (cut > max * .65 ? part.slice(0, cut) : part) + "…"; }
-function titleCase(value) { return value ? value.charAt(0).toUpperCase() + value.slice(1) : value; }
-function readSaved() { try { return JSON.parse(localStorage.getItem("aleatron-saved") || "[]"); } catch { return []; } }
-function writeSaved() { try { localStorage.setItem("aleatron-saved", JSON.stringify(state.saved)); } catch { toast("El navegador no permite guardar más ideas."); } }
+const state={count:0,current:null,loading:false,saved:readSaved(),lastResults:[]};
+function rand(list){return list[Math.floor(Math.random()*list.length)];}
+function shuffle(list){const a=[...list];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function prettify(value=""){return value.replace(/-/g," ").replace(/\b\w/g,m=>m.toUpperCase());}
+function suitEs(suit=""){return ({DIAMONDS:"diamantes",HEARTS:"corazones",SPADES:"picas",CLUBS:"tréboles"})[suit]||suit.toLowerCase();}
+function trimAt(value,max){const s=String(value??"").trim().replace(/\s+/g," ");if(s.length<=max)return s;const part=s.slice(0,max-1);const cut=part.lastIndexOf(" ");return(cut>max*.65?part.slice(0,cut):part)+"…";}
+function titleCase(value){return value?value.charAt(0).toUpperCase()+value.slice(1):value;}
+function decodeEntities(value=""){const el=document.createElement("textarea");el.innerHTML=String(value);return el.value.replace(/\s+/g," ").trim();}
+function readSaved(){try{return JSON.parse(localStorage.getItem("aleatron-saved")||"[]");}catch{return[];}}
+function writeSaved(){try{localStorage.setItem("aleatron-saved",JSON.stringify(state.saved));}catch{toast("El navegador no permite guardar más ideas.");}}
+async function fetchJson(url,timeoutMs=API_TIMEOUT){const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(url,{signal:controller.signal,cache:"no-store"});if(!response.ok)throw new Error(`HTTP ${response.status}`);return await response.json();}finally{clearTimeout(timeout);}}
+async function translateToSpanish(text){if(!text||!/[A-Za-z]/.test(text))return text;try{const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|es`;const data=await fetchJson(url,TRANSLATE_TIMEOUT);const translated=data?.responseData?.translatedText;if(translated&&translated.toLowerCase()!==text.toLowerCase())return decodeEntities(translated);}catch{}return decodeEntities(text);}
+async function pull(source){const start=performance.now();try{const url=typeof source.url==="function"?source.url():source.url;const raw=await fetchJson(url);let value=source.parse(raw);if(!value)throw new Error("Sin datos utilizables");value=decodeEntities(String(value));if(source.lang==="en")value=await translateToSpanish(value);return{source,value,ms:Math.round(performance.now()-start),ok:true};}catch(error){return{source,ok:false,error:error?.name==="AbortError"?"Tiempo agotado":error.message};}}
+function pickSources(){return shuffle(SOURCES).slice(0,4+Math.floor(Math.random()*2));}
+function cleanFact(result,fallback){return trimAt(result?.value||fallback,130);}
 
-async function fetchJson(url, timeoutMs = API_TIMEOUT) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
-  } finally { clearTimeout(timeout); }
-}
+function makeTitle(mode,a,b){const first=trimAt(a?.value||"un fenómeno inexplicable",65),second=trimAt(b?.value||"una comunidad de vecinos",55);if(mode==="personaje")return rand([`${titleCase(first)}: ${rand(["héroe por accidente","profesional del desastre","amenaza administrativa","villano de media jornada"])}`,`El último ${rand(["experto","superviviente","influencer","funcionario"])} de ${second}`]);if(mode==="invento")return rand([`${titleCase(first)}®: ahora con ${second}`,`El ${rand(["anti-","multi-","hiper-","cuántico "])}${titleCase(first)}`,`Una solución de ${second} para un problema inexistente`]);if(mode==="mundo")return rand([`El planeta donde ${first.toLowerCase()} es ley`,`Bienvenidos a ${titleCase(second)}`,`La república independiente de ${first}`]);if(mode==="video")return rand([`Probamos ${first} durante 24 horas`,`POV: ${first} te debe dinero`,`Unboxing de ${second} (sale mal)`]);if(mode==="historia")return rand([`La increíble historia de ${first}`,`${titleCase(first)} y el misterio de ${second}`,`Nadie esperaba que ${first.toLowerCase()} acabara así`]);return rand([`${titleCase(first)} contra ${second}`,`${titleCase(first)}: el incidente`,`¿Quién ha autorizado ${second}?`,`${titleCase(first)} y otros errores del sistema`]);}
 
-async function translateToSpanish(text) {
-  if (!text || !/[A-Za-z]/.test(text)) return text;
-  try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|es`;
-    const data = await fetchJson(url, TRANSLATE_TIMEOUT);
-    const translated = data?.responseData?.translatedText;
-    if (translated && translated.toLowerCase() !== text.toLowerCase()) return translated;
-  } catch { /* La traducción es un extra: conservamos el dato original si falla. */ }
-  return text;
-}
+function makeFields(mode,a,b,c,absurdity){const x=cleanFact(a,"un dato aparentemente irrelevante"),y=cleanFact(b,"una situación profundamente incómoda"),z=cleanFact(c,"un trámite municipal");const bridge=rand(bridges),connector=rand(connectors),problem=rand(problems);const reality=absurdity>=85?rand(["la lógica ha dimitido","la realidad está en modo avión","el sentido común ha bloqueado el número"]):absurdity>=55?rand(["la lógica ha pedido vacaciones","nadie se ha leído el manual","todo parece legal a primera vista"]):rand(["los números cuadran","esto podría tener una explicación","la realidad aún no ha presentado alegaciones"]);
+if(mode==="historia")return[{label:"Premisa",text:`Todo comienza cuando alguien descubre que «${x}». Lo que parecía una anécdota cambia por completo cuando «${y}».`},{label:"Protagonista",text:`Una persona normal, ${connector}, que solo quiere resolver el problema sin llamar demasiado la atención.`},{label:"Antagonista",text:`${titleCase(z)} se convierte en el obstáculo central: no parece peligroso, pero tiene exactamente el poder administrativo que hace falta para arruinarlo todo.`},{label:"Reglas del mundo",text:`La realidad funciona con una regla sencilla: si alguien afirma oficialmente que algo es normal, pasa a ser legalmente normal.`},{label:"Conflicto",text:`El protagonista debe elegir entre arreglar «${x}» o aprovecharse de «${y}» antes de que ${problem}`},{label:"Giro",text:`${bridge}, se descubre que «${z}» llevaba años siendo la pieza que faltaba.`},{label:"Final posible",text:`El problema se resuelve, pero solo después de que ${connector}. Nadie aprende la lección.`},{label:"Tono",text:`Comedia absurda, ritmo rápido y consecuencias cada vez más grandes para un problema que empezó siendo ridículo.` }];
+if(mode==="personaje")return[{label:"Quién es",text:`Una persona aparentemente normal obsesionada con «${x}". Nadie sabe por qué, incluida ella.`},{label:"Objetivo",text:`Quiere convertir «${y}" en una profesión respetable aunque todo el mundo le diga que no es buena idea.`},{label:"Profesión",text:`${titleCase(z)} / consultor independiente / experto autoproclamado.`},{label:"Habilidad inútil",text:`Puede explicar durante veinte minutos cualquier cosa relacionada con «${x}", pero nunca sabe cuándo parar.`},{label:"Defecto",text:`Confunde seguridad con tener una opinión sobre absolutamente todo.`},{label:"Enemigo",text:`${titleCase(y)}. No parece una amenaza hasta que descubre que puede denunciarle por un formulario.`},{label:"Giro",text:`En realidad, ${connector}.`},{label:"Arco",text:`Empieza queriendo demostrar que tenía razón y termina aceptando que quizá el problema era él. Solo quizá.`}];
+if(mode==="video")return[{label:"Hook",text:`«Hoy vamos a descubrir qué pasa si mezclamos ${x} con ${y}.»`},{label:"Premisa",text:`Convertir una combinación absurda de datos reales en un reto que empieza siendo controlable y termina completamente fuera de escala.`},{label:"Estructura",text:`1. Presentación del dato. 2. Regla del reto. 3. Primer intento. 4. Consecuencia inesperada. 5. Escalada. 6. Descubrimiento de ${z}.`},{label:"Momentos clave",text:`El primer fracaso, una discusión completamente innecesaria y el momento exacto en que alguien dice «esto ya no estaba en el guion».`},{label:"Remate",text:`${bridge}, ${connector}. Corte a negro.`},{label:"CTA",text:`Pedir a la audiencia que proponga la siguiente combinación de dos cosas que nunca deberían juntarse.`}];
+if(mode==="mundo")return[{label:"Premisa",text:`En este mundo, «${x}" es una verdad básica y «${y}" forma parte de la vida cotidiana.`},{label:"Regla principal",text:`Todo aquello que aparezca tres veces en un documento oficial adquiere fuerza de ley.`},{label:"Sociedad",text:`La gente organiza su vida alrededor de ${z}. Hay expertos, sindicatos, coleccionistas y gente que presume de hacerlo mal.`},{label:"Tecnología / costumbres",text:`La tecnología existe para resolver problemas que fueron creados por la propia tecnología. Nadie considera esto extraño.`},{label:"Conflicto",text:`Una nueva generación quiere romper la regla porque descubre que ${x} quizá no sea cierto.`},{label:"Facciones",text:`Los Normalizadores, los Improvisadores y una tercera organización que solo existe porque alguien registró el nombre antes.`},{label:"Giro",text:`${bridge}, se descubre que la regla principal fue inventada para solucionar un problema completamente distinto.`}];
+if(mode==="invento")return[{label:"Producto",text:`${titleCase(x)}®: el dispositivo que combina ${x} con ${y}.`},{label:"Problema que resuelve",text:`Ninguno que exista de verdad. Pero después de verlo, todo el mundo siente que lo necesita.`},{label:"Cómo funciona",text:`Detecta ${z}, emite una señal absurda y obliga al usuario a tomar una decisión que podría haber tomado sin comprar nada.`},{label:"Público objetivo",text:`Personas que dicen «esto es una tontería» mientras abren la cartera.`},{label:"Ventaja competitiva",text:`Es imposible compararlo con otro producto porque nadie ha tenido el valor de fabricar uno igual.`},{label:"Defecto fatal",text:`${bridge}, ${connector}.`},{label:"Anuncio",text:`«¿Cansado de ${y}? Presentamos ${titleCase(x)}®. Porque solucionar problemas normales ya está demasiado visto.»`}];
+return[{label:"Premisa",text:`Una combinación de «${x}" y «${y}" provoca una situación que nadie había previsto.`},{label:"Qué está pasando",text:`${bridge}, alguien descubre que ${z}.`},{label:"Regla absurda",text:`Cuanto más oficial parece una afirmación, menos probable es que alguien compruebe si es cierta.`},{label:"Conflicto",text:`El problema escala hasta que ${problem}`},{label:"Giro",text:`Se descubre que ${connector}.`},{label:"Final posible",text:`Todo termina con ${reality}, mientras alguien intenta convencer a todos de que estaba planeado.`}];}
 
-async function pull(source) {
-  const start = performance.now();
-  try {
-    const url = typeof source.url === "function" ? source.url() : source.url;
-    const raw = await fetchJson(url);
-    let value = source.parse(raw);
-    if (!value) throw new Error("Sin datos utilizables");
-    value = String(value);
-    if (source.lang === "en") value = await translateToSpanish(value);
-    return { source, value, ms: Math.round(performance.now() - start), ok: true };
-  } catch (error) {
-    return { source, ok: false, error: error?.name === "AbortError" ? "Tiempo agotado" : error.message };
-  }
-}
+function buildIdea(results,mode,absurdity){const facts=results.filter(r=>r.ok&&r.value);if(facts.length<2)throw new Error("No han llegado suficientes datos de las APIs.");const primary=rand(facts),secondary=rand(facts.filter(x=>x!==primary))||primary,tertiary=rand(facts.filter(x=>x!==primary&&x!==secondary))||secondary;return{id:Date.now()+Math.random(),mode,absurdity,title:makeTitle(mode,primary,secondary),description:modeInfo[mode].output,fields:makeFields(mode,primary,secondary,tertiary,absurdity),sources:[...new Set([primary.source,secondary.source,tertiary.source])].map(s=>s.name),raw:results};}
 
-function pickSources() { return shuffle(SOURCES).slice(0, 4 + Math.floor(Math.random() * 2)); }
+function escapeHtml(value){return String(value??"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));}
+function renderStructure(idea){const container=$("#idea-structure");container.innerHTML=idea.fields.map(field=>`<div class="structure-item"><h4>${escapeHtml(field.label)}</h4><p>${escapeHtml(field.text)}</p></div>`).join("");}
+function ideaText(idea){return [`Título: ${idea.title}`,...idea.fields.map(f=>`${f.label}: ${f.text}`),`Modo: ${modeInfo[idea.mode].name}`,`Fuentes: ${idea.sources.join(" · ")}`].join("\n\n");}
+function renderIdea(idea){state.current=idea;$("#idea-number").textContent=`TIRADA #${String(state.count).padStart(3,"0")}`;$("#idea-title").textContent=idea.title;$("#idea-description").textContent=idea.description;$("#idea-tags").innerHTML=`<span>${escapeHtml(modeInfo[idea.mode].name.toUpperCase())}</span><span>${idea.absurdity}% ABSURDO</span>`;renderStructure(idea);$("#idea-footnote").textContent=`FUENTES: ${idea.sources.join(" · ")}`;$("#source-status-text").textContent=`${idea.sources.length} FUENTES RESPONDIERON`;$("#copy-button").disabled=false;$("#save-button").disabled=false;$("#save-button").textContent=state.saved.some(x=>x.id===idea.id)?"✓":"＋";}
+function renderSourceTiles(results){const html=results.map(r=>`<a class="source-tile ${r.ok?"is-ok":"is-error"}" href="${escapeHtml(r.source.docs)}" target="_blank" rel="noreferrer"><span class="source-icon">${escapeHtml(r.source.icon)}</span><div><strong>${escapeHtml(r.source.name)}</strong><small>${r.ok?`${escapeHtml(r.source.kind)} · ${r.ms} ms`:escapeHtml(r.error||"No disponible")}</small></div><i>${r.ok?"●":"×"}</i></a>`).join("");$("#source-grid").innerHTML=html;}
+function renderSaved(){const list=$("#saved-list");if(!state.saved.length){list.innerHTML='<p class="empty-saved">Todavía no hay ideas. Qué bonito es no tener antecedentes.</p>';return;}list.innerHTML=state.saved.map(idea=>`<article class="saved-card"><div><small>${escapeHtml(modeInfo[idea.mode]?.name||"Idea")} · ${idea.absurdity}% ABSURDO</small><h3>${escapeHtml(idea.title)}</h3><p>${escapeHtml(idea.fields?.[0]?.text||"")}</p></div><button type="button" data-delete="${idea.id}" aria-label="Eliminar idea">×</button></article>`).join("");}
+function updateAbsurdity(value){const n=Number(value);$("#absurdity-value").textContent=`${n}%`;document.documentElement.style.setProperty("--range-progress",`${((n-20)/80)*100}%`);$("#absurdity-description").textContent=n<35?"Raro, pero todavía podría pasarle a alguien.":n<60?"La realidad empieza a perder credibilidad.":n<80?"Aquí ya hacen falta explicaciones y probablemente un abogado.":n<95?"La lógica ha solicitado la baja voluntaria.":"La realidad ha dejado de contestar al teléfono.";}
+function updateMode(){const mode=$("#mode").value;const info=modeInfo[mode];$("#mode-description").textContent=`${info.description} ${info.output}`;$("#generation-hint").textContent=info.short;document.querySelectorAll(".mode-guide-item").forEach(el=>el.classList.toggle("is-active",el.dataset.mode===mode));}
+function renderModeGuide(){$("#mode-guide").innerHTML=Object.entries(modeInfo).map(([id,info])=>`<button type="button" class="mode-guide-item ${id===$("#mode").value?"is-active":""}" data-mode="${id}"><strong>${escapeHtml(info.name)}</strong><span>${escapeHtml(info.short)}</span></button>`).join("");$("#mode-guide").querySelectorAll("[data-mode]").forEach(button=>button.addEventListener("click",()=>{$("#mode").value=button.dataset.mode;updateMode();}));}
+function setLoading(on){state.loading=on;$("#generate-button").disabled=on;$("#mini-spinner").classList.toggle("is-loading",on);$("#source-status-text").textContent=on?"CONSULTANDO APIs…":"EN ESPERA DEL CAOS";}
+function toast(message){const el=$("#toast");el.textContent=message;el.classList.add("is-visible");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove("is-visible"),2200);}
+async function generate(){if(state.loading)return;setLoading(true);$("#error-note").hidden=true;try{let sources=pickSources();let results=await Promise.all(sources.map(pull));if(results.filter(r=>r.ok).length<3){const extra=shuffle(SOURCES.filter(s=>!sources.includes(s))).slice(0,3);results=[...results,...await Promise.all(extra.map(pull))];}const successful=results.filter(r=>r.ok);if(successful.length<2)throw new Error("Las APIs están teniendo un día complicado. Prueba otra vez.");state.lastResults=results;state.count++;const idea=buildIdea(results,$("#mode").value,Number($("#absurdity").value));renderIdea(idea);renderSourceTiles(results);$("#idea-card").classList.remove("idea-pop");requestAnimationFrame(()=>$("#idea-card").classList.add("idea-pop"));}catch(error){$("#error-note").textContent=error.message||"Algo ha salido mal.";$("#error-note").hidden=false;}finally{setLoading(false);}}
 
-function makeTitle(mode, a, b) {
-  const first = trimAt(a?.value || "un fenómeno inexplicable", 65);
-  const second = trimAt(b?.value || "una comunidad de vecinos", 55);
-  if (mode === "personaje") return rand([`${titleCase(first)}: ${rand(["héroe por accidente", "profesional del desastre", "amenaza administrativa", "villano de media jornada"])}`, `El último ${rand(["experto", "superviviente", "influencer", "funcionario"])} de ${second}`, `${rand(["Don", "Doña", "Capitán", "Doctor"])} ${titleCase(first)}`]);
-  if (mode === "invento") return rand([`${titleCase(first)}®: ahora con ${second}`, `El ${rand(["anti-", "multi-", "hiper-", "cuántico "])}${titleCase(first)}`, `Una solución de ${second} para un problema inexistente`]);
-  if (mode === "mundo") return rand([`El planeta donde ${first.toLowerCase()} es ley`, `Bienvenidos a ${titleCase(second)}`, `La república independiente de ${first}`]);
-  if (mode === "video") return rand([`Probamos ${first} durante 24 horas`, `POV: ${first} te debe dinero`, `Unboxing de ${second} (sale mal)`]);
-  if (mode === "historia") return rand([`La increíble historia de ${first}`, `${titleCase(first)} y el misterio de ${second}`, `Nadie esperaba que ${first.toLowerCase()} acabara así`]);
-  return rand([`${titleCase(first)} contra ${second}`, `${titleCase(first)}: el incidente`, `¿Quién ha autorizado ${second}?`, `${titleCase(first)} y otros errores del sistema`]);
-}
+$("#generate-button").addEventListener("click",generate);
+$("#absurdity").addEventListener("input",e=>updateAbsurdity(e.target.value));
+$("#mode").addEventListener("change",updateMode);
+$("#copy-button").addEventListener("click",async()=>{if(!state.current)return;try{await navigator.clipboard.writeText(ideaText(state.current));toast("Idea copiada. Ahora haz algo con ella.");}catch{toast("No se pudo copiar automáticamente.");}});
+$("#save-button").addEventListener("click",()=>{if(!state.current)return;const index=state.saved.findIndex(x=>x.id===state.current.id);if(index>=0){state.saved.splice(index,1);toast("Idea eliminada del archivo.");}else{state.saved.unshift(state.current);toast("Idea guardada.");}writeSaved();renderSaved();renderIdea(state.current);});
+$("#clear-saved").addEventListener("click",()=>{state.saved=[];writeSaved();renderSaved();toast("Archivo vacío.");});
+$("#saved-list").addEventListener("click",e=>{const button=e.target.closest("[data-delete]");if(!button)return;state.saved=state.saved.filter(x=>String(x.id)!==button.dataset.delete);writeSaved();renderSaved();});
 
-function makeDescription(mode, a, b, c, absurdity) {
-  const subject = trimAt(a?.value || "un hecho aparentemente irrelevante", 115);
-  const extra = trimAt(b?.value || "una situación profundamente incómoda", 100);
-  const third = trimAt(c?.value || "un trámite municipal", 95);
-  const weird = rand(connectors);
-  if (mode === "personaje") return `Su rasgo distintivo es que conoce el dato de «${trimAt(subject, 125)}». En su tiempo libre, ${weird}. Su mayor enemigo: ${extra}. ${rand(endings)}`;
-  if (mode === "invento") return `Un dispositivo que combina «${trimAt(subject, 110)}» con «${trimAt(extra, 95)}». Promete revolucionar un sector que no existe. ${rand(bridges)}, ${weird}. ${rand(endings)}`;
-  if (mode === "mundo") return `En este universo, el conocimiento de que «${trimAt(subject, 110)}» ha cambiado la estructura de la sociedad. Todo se sostiene gracias a «${trimAt(extra, 100)}». ${rand(bridges)}, ${third}.`;
-  if (mode === "video") return `Formato: falso documental con presupuesto de 14 €. El reto empieza con «${trimAt(subject, 100)}» y termina en «${trimAt(extra, 100)}». ${rand(bridges)}, alguien tiene que presentar una reclamación formal.`;
-  if (mode === "historia") return `La premisa: «${trimAt(subject, 120)}». El protagonista solo quería tener un martes tranquilo, pero «${trimAt(extra, 105)}» cambia las reglas. ${rand(bridges)}, ${weird}. ${rand(endings)}`;
-  const level = absurdity >= 85 ? rand(["la lógica ha dimitido", "el sentido común ha bloqueado el número", "la realidad está en modo avión"]) : absurdity >= 55 ? rand(["todo parece legal a primera vista", "la lógica ha pedido vacaciones", "nadie se ha leído el manual"]) : rand(["es raro, pero los números cuadran", "esto podría tener una explicación", "la realidad aún no ha presentado alegaciones"]);
-  return `Se ha detectado «${subject}» en combinación con «${extra}». ${rand(bridges)}, ${weird}. El informe final confirma que ${level}, ${rand(problems)}`;
-}
-
-function buildIdea(results, mode, absurdity) {
-  const facts = results.filter(r => r.ok && r.value);
-  const primary = rand(facts);
-  const secondary = rand(facts.filter(x => x !== primary)) || primary;
-  const tertiary = rand(facts.filter(x => x !== primary && x !== secondary)) || secondary;
-  const chosen = [...new Set([primary, secondary, tertiary].filter(Boolean))];
-  return { id: Date.now() + Math.random(), title: makeTitle(mode, primary, secondary), description: makeDescription(mode, primary, secondary, tertiary, absurdity), mode, absurdity, tags: chosen.map(r => r.source.name.toUpperCase()).slice(0, 3), sources: [...new Set(facts.map(r => r.source.name))], createdAt: new Date().toISOString() };
-}
-
-function updateSourceTiles(results = []) {
-  $("#source-grid").innerHTML = SOURCES.map(source => {
-    const result = results.find(r => r.source.id === source.id);
-    const status = result ? (result.ok ? `Respondió en ${result.ms} ms` : "No respondió esta vez") : source.kind;
-    return `<a class="source-tile ${result?.ok ? "is-ok is-used" : ""} ${result && !result.ok ? "is-failed" : ""}" href="${source.docs}" target="_blank" rel="noreferrer"><span class="source-icon">${source.icon}</span><div><strong>${escapeText(source.name)}</strong><small>${escapeText(status)}</small></div><span class="source-state">${result ? (result.ok ? "●" : "×") : "↗"}</span></a>`;
-  }).join("");
-}
-
-function updateAbsurdity(value) {
-  const number = Number(value);
-  const output = $("#absurdity-value");
-  output.textContent = `${number}%`;
-  $("#absurdity-description").textContent = absurdityDescription(number);
-  $("#absurdity").style.setProperty("--range-progress", `${number}%`);
-}
-function absurdityDescription(value) {
-  if (value < 35) return "Raro, pero todavía podría pasarle a alguien.";
-  if (value < 60) return "La realidad empieza a perder credibilidad.";
-  if (value < 80) return "Aquí ya hacen falta explicaciones y probablemente un abogado.";
-  if (value < 95) return "La lógica ha solicitado la baja voluntaria.";
-  return "La realidad ha dejado de contestar al teléfono.";
-}
-
-function renderIdea(idea) {
-  $("#idea-number").textContent = `TIRADA #${String(state.count).padStart(3, "0")}`;
-  $("#idea-tags").innerHTML = idea.tags.map(tag => `<span>${escapeText(tag)}</span>`).join("") + `<span>${idea.absurdity}% ABSURDO</span>`;
-  const title = $("#idea-title"); title.replaceChildren();
-  const parts = idea.title.split(": ");
-  title.append(document.createTextNode(parts[0]));
-  if (parts.length > 1) { title.append(document.createElement("br")); const em = document.createElement("em"); em.textContent = parts.slice(1).join(": "); title.append(em); }
-  $("#idea-description").textContent = idea.description;
-  $("#idea-footnote").textContent = `FUENTES USADAS: ${idea.sources.join(" · ").toUpperCase()}`;
-  $("#idea-doodle").textContent = rand(["✳", "↯", "☻", "※", "✷", "⊹", "?!", "∞"]);
-  $("#source-status-text").textContent = `${idea.sources.length} FUENTES RESPONDIERON · DATOS REALES`;
-  $(".result-status").classList.add("live");
-  $("#copy-button").disabled = false;
-  $("#save-button").disabled = false;
-  const card = $("#idea-card"); card.classList.remove("is-loading", "is-refreshing"); void card.offsetWidth; card.classList.add("is-refreshing");
-}
-
-async function generate() {
-  if (state.loading) return;
-  state.loading = true;
-  const button = $("#generate-button");
-  button.disabled = true;
-  button.querySelector("span:nth-child(2)").textContent = "CONSULTANDO EL CAOS…";
-  $("#idea-card").classList.add("is-loading");
-  $("#error-note").hidden = true;
-  $("#source-status-text").textContent = "LLAMANDO A LAS APIS…";
-  $("#generation-hint").textContent = "Llamadas HTTP en marcha. Que sea lo que el servidor quiera.";
-  const mode = $("#mode").value;
-  const absurdity = Number($("#absurdity").value);
-  const selected = pickSources();
-  let results = await Promise.all(selected.map(pull));
-  let successful = results.filter(r => r.ok && r.value);
-  if (successful.length < 2) {
-    const alreadyTried = new Set(results.map(r => r.source.id));
-    const extras = shuffle(SOURCES.filter(s => !alreadyTried.has(s.id))).slice(0, 5);
-    results = results.concat(await Promise.all(extras.map(pull)));
-    successful = results.filter(r => r.ok && r.value);
-  }
-  state.lastResults = results;
-  state.count++;
-  updateSourceTiles(results);
-  if (!successful.length) {
-    $("#source-status-text").textContent = "LAS APIS HAN HECHO GHOSTING";
-    $("#error-note").hidden = false;
-    $("#error-note").textContent = "Ninguna fuente ha respondido con datos utilizables. Puede ser CORS, una caída temporal o la red. Prueba otra vez.";
-    $("#generation-hint").textContent = "Sin datos reales, no hay humo creativo.";
-  } else {
-    state.current = buildIdea(successful, mode, absurdity);
-    renderIdea(state.current);
-    const failed = results.length - successful.length;
-    $("#generation-hint").textContent = failed ? `${successful.length} fuentes útiles · ${failed} han pasado de nosotros.` : "Las fuentes han respondido. El azar está de buen humor.";
-  }
-  $("#idea-card").classList.remove("is-loading");
-  button.disabled = false;
-  button.querySelector("span:nth-child(2)").textContent = "FABRICAR ABSURDO";
-  state.loading = false;
-}
-
-function toast(message) { const el = $("#toast"); el.textContent = message; el.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove("show"), 2200); }
-function currentIdeaText(idea) { return `${idea.title}\n\n${idea.description}\n\nFuentes: ${idea.sources.join(", ")}\nGenerado por Aleatrón sin IA.`; }
-async function copyIdea() { if (!state.current) return; try { await navigator.clipboard.writeText(currentIdeaText(state.current)); toast("Idea copiada. Úsala con responsabilidad."); } catch { toast("No se pudo copiar automáticamente."); } }
-function saveIdea() { if (!state.current) return; if (state.saved.some(item => item.title === state.current.title && item.description === state.current.description)) { toast("Esta idea ya está archivada."); return; } state.saved.unshift({ ...state.current, id: Date.now() + Math.random() }); state.saved = state.saved.slice(0, 30); writeSaved(); renderSaved(); toast("Añadida al archivo de ideas."); }
-function removeSaved(id) { state.saved = state.saved.filter(item => item.id !== id); writeSaved(); renderSaved(); }
-function renderSaved() {
-  const list = $("#saved-list");
-  if (!state.saved.length) { list.innerHTML = '<p class="empty-saved">Todavía no hay ideas. Qué bonito es no tener antecedentes.</p>'; return; }
-  list.innerHTML = state.saved.map((idea, index) => `<article class="saved-card"><div class="saved-card-top"><span>IDEA ARCHIVADA #${String(state.saved.length - index).padStart(2, "0")}</span><span>${new Date(idea.createdAt).toLocaleDateString("es-ES")}</span></div><h3>${escapeText(idea.title)}</h3><p>${escapeText(idea.description)}</p><div class="saved-card-top"><span>${escapeText((idea.sources || []).join(" · "))}</span><button type="button" data-remove="${idea.id}">ELIMINAR ×</button></div></article>`).join("");
-  list.querySelectorAll("[data-remove]").forEach(button => button.addEventListener("click", () => removeSaved(Number(button.dataset.remove))));
-}
-
-$("#generate-button").addEventListener("click", generate);
-$("#absurdity").addEventListener("input", event => updateAbsurdity(event.target.value));
-$("#copy-button").addEventListener("click", copyIdea);
-$("#save-button").addEventListener("click", saveIdea);
-$("#clear-saved").addEventListener("click", () => { state.saved = []; writeSaved(); renderSaved(); toast("Archivo destruido. No quedan pruebas."); });
-$("#mode").addEventListener("change", () => { const mode = modeInfo[$("#mode").value]; $("#mode-description").textContent = mode.hint; $("#generation-hint").textContent = mode.hint; });
-
-updateAbsurdity($("#absurdity").value);
-$("#mode-description").textContent = modeInfo[$("#mode").value].hint;
-updateSourceTiles();
-renderSaved();
+updateAbsurdity($("#absurdity").value);updateMode();renderModeGuide();renderSaved();
