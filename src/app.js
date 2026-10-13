@@ -1,26 +1,49 @@
 const API_TIMEOUT = 8500;
+const TRANSLATE_TIMEOUT = 6000;
 const $ = (selector) => document.querySelector(selector);
 
 const SOURCES = [
-  { id: "useless-facts", name: "Useless Facts", kind: "Dato inútil", icon: "?!", url: "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en", docs: "https://uselessfacts.jsph.pl/", parse: r => r.text },
-  { id: "cat-facts", name: "Cat Facts", kind: "Biología felina", icon: "↗", url: "https://catfact.ninja/fact", docs: "https://catfact.ninja/", parse: r => r.fact },
-  { id: "dog-facts", name: "Dog Facts", kind: "Datos perrunos", icon: "⌁", url: "https://dogapi.dog/api/v2/facts", docs: "https://dogapi.dog/", parse: r => r.data?.[0]?.attributes?.body || r.fact },
-  { id: "pokeapi", name: "PokéAPI", kind: "Pokémon", icon: "◉", url: () => `https://pokeapi.co/api/v2/pokemon/${1 + Math.floor(Math.random() * 1025)}`, docs: "https://pokeapi.co/", parse: r => prettify(r.name) },
-  { id: "official-joke", name: "Official Joke API", kind: "Chistes malos", icon: "☻", url: "https://official-joke-api.appspot.com/random_joke", docs: "https://github.com/15Dkatz/official_joke_api", parse: r => [r.setup, r.punchline].filter(Boolean).join(" — ") },
-  { id: "jokeapi", name: "JokeAPI", kind: "Humor", icon: "↯", url: "https://v2.jokeapi.dev/joke/Any?blacklistFlags=nsfw,racist,sexist,explicit&type=single", docs: "https://jokeapi.dev/", parse: r => r.joke || [r.setup, r.delivery].filter(Boolean).join(" — ") },
-  { id: "chucknorris", name: "Chuck Norris Facts", kind: "Leyenda urbana", icon: "★", url: "https://api.chucknorris.io/jokes/random", docs: "https://api.chucknorris.io/", parse: r => r.value },
-  { id: "ron-swanson", name: "Ron Swanson Quotes", kind: "Filosofía de bar", icon: "☕", url: "https://ron-swanson-quotes.herokuapp.com/v2/quotes", docs: "https://github.com/jamesseanwright/ron-swanson-quotes", parse: r => Array.isArray(r) ? r[0] : r },
-  { id: "boredapi", name: "Bored API", kind: "Actividades", icon: "⌂", url: "https://bored-api.appbrewery.com/random", docs: "https://bored-api.appbrewery.com/", parse: r => r.activity },
-  { id: "random-user", name: "Random User", kind: "Persona ficticia", icon: "☺", url: "https://randomuser.me/api/?nat=es,gb,us", docs: "https://randomuser.me/", parse: r => { const u = r.results?.[0]; return u ? `${u.name.first} ${u.name.last} de ${u.location.city}` : ""; } },
-  { id: "deckofcards", name: "Deck of Cards", kind: "Carta aleatoria", icon: "♠", url: "https://deckofcardsapi.com/api/deck/new/draw/?count=1", docs: "https://deckofcardsapi.com/", parse: r => { const c = r.cards?.[0]; return c ? `${c.value} de ${suitEs(c.suit)}` : ""; } },
-  { id: "advice-slip", name: "Advice Slip", kind: "Consejo cuestionable", icon: "✎", url: "https://api.adviceslip.com/advice", docs: "https://api.adviceslip.com/", parse: r => r.slip?.advice },
-  { id: "dog-ceo", name: "Dog CEO", kind: "Dato perruno", icon: "♧", url: "https://dog.ceo/api/breeds/list/random", docs: "https://dog.ceo/dog-api/", parse: r => `La raza elegida al azar es ${r.message}.` }
+  { id: "useless-facts", name: "Useless Facts", kind: "Dato curioso", icon: "?!", lang: "en", url: "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en", docs: "https://uselessfacts.jsph.pl/", parse: r => r.text },
+  { id: "cat-facts", name: "Cat Facts", kind: "Datos de gatos", icon: "↗", lang: "en", url: "https://catfact.ninja/fact", docs: "https://catfact.ninja/", parse: r => r.fact },
+  { id: "dog-facts", name: "Dog Facts", kind: "Datos de perros", icon: "⌁", lang: "en", url: "https://dogapi.dog/api/v2/facts", docs: "https://dogapi.dog/", parse: r => r.data?.[0]?.attributes?.body || r.fact },
+  { id: "pokeapi", name: "PokéAPI", kind: "Pokémon", icon: "◉", lang: "es", url: () => `https://pokeapi.co/api/v2/pokemon/${1 + Math.floor(Math.random() * 1025)}`, docs: "https://pokeapi.co/", parse: r => prettify(r.name) },
+  { id: "official-joke", name: "Official Joke API", kind: "Chistes", icon: "☻", lang: "en", url: "https://official-joke-api.appspot.com/random_joke", docs: "https://github.com/15Dkatz/official_joke_api", parse: r => [r.setup, r.punchline].filter(Boolean).join(" — ") },
+  { id: "jokeapi", name: "JokeAPI", kind: "Humor", icon: "↯", lang: "en", url: "https://v2.jokeapi.dev/joke/Any?blacklistFlags=nsfw,racist,sexist,explicit&type=single", docs: "https://jokeapi.dev/", parse: r => r.joke || [r.setup, r.delivery].filter(Boolean).join(" — ") },
+  { id: "chucknorris", name: "Chuck Norris Facts", kind: "Leyenda urbana", icon: "★", lang: "en", url: "https://api.chucknorris.io/jokes/random", docs: "https://api.chucknorris.io/", parse: r => r.value },
+  { id: "ron-swanson", name: "Ron Swanson Quotes", kind: "Filosofía de bar", icon: "☕", lang: "en", url: "https://ron-swanson-quotes.herokuapp.com/v2/quotes", docs: "https://github.com/jamesseanwright/ron-swanson-quotes", parse: r => Array.isArray(r) ? r[0] : r },
+  { id: "boredapi", name: "Bored API", kind: "Actividades", icon: "⌂", lang: "en", url: "https://bored-api.appbrewery.com/random", docs: "https://bored-api.appbrewery.com/", parse: r => r.activity },
+  { id: "random-user", name: "Random User", kind: "Persona ficticia", icon: "☺", lang: "es", url: "https://randomuser.me/api/?nat=es", docs: "https://randomuser.me/", parse: r => { const u = r.results?.[0]; return u ? `${u.name.first} ${u.name.last} de ${u.location.city}` : ""; } },
+  { id: "deckofcards", name: "Deck of Cards", kind: "Carta aleatoria", icon: "♠", lang: "es", url: "https://deckofcardsapi.com/api/deck/new/draw/?count=1", docs: "https://deckofcardsapi.com/", parse: r => { const c = r.cards?.[0]; return c ? `${c.value} de ${suitEs(c.suit)}` : ""; } },
+  { id: "advice-slip", name: "Advice Slip", kind: "Consejo cuestionable", icon: "✎", lang: "en", url: "https://api.adviceslip.com/advice", docs: "https://api.adviceslip.com/", parse: r => r.slip?.advice },
+  { id: "dog-ceo", name: "Dog CEO", kind: "Raza de perro", icon: "♧", lang: "es", url: "https://dog.ceo/api/breeds/list/random", docs: "https://dog.ceo/dog-api/", parse: r => `La raza elegida al azar es ${r.message}.` }
 ];
 
-const problems = ["y descubre que alguien ha convertido esto en un trámite oficial.", "pero la burocracia local exige tres copias y un sacrificio simbólico.", "hasta que aparece una persona que asegura haberlo patentado en 1998.", "y el único experto disponible es un señor que ha venido a cambiar el router.", "aunque todo el mundo insiste en que es perfectamente normal.", "justo cuando un comité internacional decide regularlo.", "pero el sindicato correspondiente se niega a colaborar.", "y ahora tiene que explicárselo a su casero.", "hasta que la situación escala por culpa de una impresora.", "pero resulta que el verdadero problema era el formulario número 7B.", "y por alguna razón, todo depende de una votación en una comunidad de vecinos.", "pero el tutorial oficial dura nueve horas y está en un idioma inventado."];
+const problems = [
+  "y descubre que alguien ha convertido esto en un trámite oficial.",
+  "pero la burocracia local exige tres copias y un sacrificio simbólico.",
+  "hasta que aparece una persona que asegura haberlo patentado en 1998.",
+  "y el único experto disponible es un señor que ha venido a cambiar el router.",
+  "aunque todo el mundo insiste en que es perfectamente normal.",
+  "justo cuando un comité internacional decide regularlo.",
+  "pero el sindicato correspondiente se niega a colaborar.",
+  "y ahora tiene que explicárselo a su casero.",
+  "hasta que la situación escala por culpa de una impresora.",
+  "pero resulta que el verdadero problema era el formulario número 7B.",
+  "y por alguna razón, todo depende de una votación en una comunidad de vecinos.",
+  "pero el tutorial oficial dura nueve horas y está en un idioma inventado."
+];
 const bridges = ["Por desgracia", "Lo inquietante es que", "El giro es que", "Todo iba más o menos bien hasta que", "Como era de esperar", "La parte ilegal (presuntamente) es que", "Nadie contaba con que"];
 const connectors = ["ha decidido montar una consultora", "se presenta a las elecciones", "quiere ser influencer", "ha heredado una oficina en el infierno", "dirige una secta con newsletter", "exige derechos laborales", "ha abierto una academia online", "está preparando una oposición", "se ha hecho crítico gastronómico", "ha fundado una startup"];
 const endings = ["y nadie ha leído los términos y condiciones.", "con la confianza de quien claramente no ha entendido nada.", "mientras suena una versión de jazz de la sintonía de Windows.", "y la única reseña tiene una estrella y dice «interesante».", "aunque Hacienda ya está al corriente.", "por motivos que un abogado recomendaría no investigar.", "y, sorprendentemente, recibe financiación europea."];
+
+const modeInfo = {
+  caos: { name: "Caos absoluto", hint: "Mezcla libre de datos. El algoritmo no responde ante nadie." },
+  historia: { name: "Premisa de historia", hint: "Convierte los datos en el germen de una historia que alguien debería escribir." },
+  personaje: { name: "Personaje lamentable", hint: "Crea un personaje absurdo con profesión, problema y cero dignidad." },
+  video: { name: "Vídeo / sketch", hint: "Pensado para un vídeo, sketch o idea de contenido que puedas grabar." },
+  mundo: { name: "Mundo imposible", hint: "Construye una sociedad donde esta combinación de datos tiene sentido. Más o menos." },
+  invento: { name: "Invento innecesario", hint: "Diseña un producto absurdo para solucionar un problema que nadie tenía." }
+};
 
 const state = { count: 0, current: null, loading: false, saved: readSaved(), lastResults: [] };
 
@@ -34,9 +57,9 @@ function titleCase(value) { return value ? value.charAt(0).toUpperCase() + value
 function readSaved() { try { return JSON.parse(localStorage.getItem("aleatron-saved") || "[]"); } catch { return []; } }
 function writeSaved() { try { localStorage.setItem("aleatron-saved", JSON.stringify(state.saved)); } catch { toast("El navegador no permite guardar más ideas."); } }
 
-async function fetchJson(url) {
+async function fetchJson(url, timeoutMs = API_TIMEOUT) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -44,18 +67,32 @@ async function fetchJson(url) {
   } finally { clearTimeout(timeout); }
 }
 
+async function translateToSpanish(text) {
+  if (!text || !/[A-Za-z]/.test(text)) return text;
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|es`;
+    const data = await fetchJson(url, TRANSLATE_TIMEOUT);
+    const translated = data?.responseData?.translatedText;
+    if (translated && translated.toLowerCase() !== text.toLowerCase()) return translated;
+  } catch { /* La traducción es un extra: conservamos el dato original si falla. */ }
+  return text;
+}
+
 async function pull(source) {
   const start = performance.now();
   try {
     const url = typeof source.url === "function" ? source.url() : source.url;
     const raw = await fetchJson(url);
-    const value = source.parse(raw);
+    let value = source.parse(raw);
     if (!value) throw new Error("Sin datos utilizables");
-    return { source, value: String(value), ms: Math.round(performance.now() - start), ok: true };
+    value = String(value);
+    if (source.lang === "en") value = await translateToSpanish(value);
+    return { source, value, ms: Math.round(performance.now() - start), ok: true };
   } catch (error) {
     return { source, ok: false, error: error?.name === "AbortError" ? "Tiempo agotado" : error.message };
   }
 }
+
 function pickSources() { return shuffle(SOURCES).slice(0, 4 + Math.floor(Math.random() * 2)); }
 
 function makeTitle(mode, a, b) {
@@ -68,6 +105,7 @@ function makeTitle(mode, a, b) {
   if (mode === "historia") return rand([`La increíble historia de ${first}`, `${titleCase(first)} y el misterio de ${second}`, `Nadie esperaba que ${first.toLowerCase()} acabara así`]);
   return rand([`${titleCase(first)} contra ${second}`, `${titleCase(first)}: el incidente`, `¿Quién ha autorizado ${second}?`, `${titleCase(first)} y otros errores del sistema`]);
 }
+
 function makeDescription(mode, a, b, c, absurdity) {
   const subject = trimAt(a?.value || "un hecho aparentemente irrelevante", 115);
   const extra = trimAt(b?.value || "una situación profundamente incómoda", 100);
@@ -81,6 +119,7 @@ function makeDescription(mode, a, b, c, absurdity) {
   const level = absurdity >= 85 ? rand(["la lógica ha dimitido", "el sentido común ha bloqueado el número", "la realidad está en modo avión"]) : absurdity >= 55 ? rand(["todo parece legal a primera vista", "la lógica ha pedido vacaciones", "nadie se ha leído el manual"]) : rand(["es raro, pero los números cuadran", "esto podría tener una explicación", "la realidad aún no ha presentado alegaciones"]);
   return `Se ha detectado «${subject}» en combinación con «${extra}». ${rand(bridges)}, ${weird}. El informe final confirma que ${level}, ${rand(problems)}`;
 }
+
 function buildIdea(results, mode, absurdity) {
   const facts = results.filter(r => r.ok && r.value);
   const primary = rand(facts);
@@ -89,6 +128,7 @@ function buildIdea(results, mode, absurdity) {
   const chosen = [...new Set([primary, secondary, tertiary].filter(Boolean))];
   return { id: Date.now() + Math.random(), title: makeTitle(mode, primary, secondary), description: makeDescription(mode, primary, secondary, tertiary, absurdity), mode, absurdity, tags: chosen.map(r => r.source.name.toUpperCase()).slice(0, 3), sources: [...new Set(facts.map(r => r.source.name))], createdAt: new Date().toISOString() };
 }
+
 function updateSourceTiles(results = []) {
   $("#source-grid").innerHTML = SOURCES.map(source => {
     const result = results.find(r => r.source.id === source.id);
@@ -96,39 +136,80 @@ function updateSourceTiles(results = []) {
     return `<a class="source-tile ${result?.ok ? "is-ok is-used" : ""} ${result && !result.ok ? "is-failed" : ""}" href="${source.docs}" target="_blank" rel="noreferrer"><span class="source-icon">${source.icon}</span><div><strong>${escapeText(source.name)}</strong><small>${escapeText(status)}</small></div><span class="source-state">${result ? (result.ok ? "●" : "×") : "↗"}</span></a>`;
   }).join("");
 }
+
+function updateAbsurdity(value) {
+  const number = Number(value);
+  const output = $("#absurdity-value");
+  output.textContent = `${number}%`;
+  $("#absurdity-description").textContent = absurdityDescription(number);
+  $("#absurdity").style.setProperty("--range-progress", `${number}%`);
+}
+function absurdityDescription(value) {
+  if (value < 35) return "Raro, pero todavía podría pasarle a alguien.";
+  if (value < 60) return "La realidad empieza a perder credibilidad.";
+  if (value < 80) return "Aquí ya hacen falta explicaciones y probablemente un abogado.";
+  if (value < 95) return "La lógica ha solicitado la baja voluntaria.";
+  return "La realidad ha dejado de contestar al teléfono.";
+}
+
 function renderIdea(idea) {
   $("#idea-number").textContent = `TIRADA #${String(state.count).padStart(3, "0")}`;
   $("#idea-tags").innerHTML = idea.tags.map(tag => `<span>${escapeText(tag)}</span>`).join("") + `<span>${idea.absurdity}% ABSURDO</span>`;
   const title = $("#idea-title"); title.replaceChildren();
-  const parts = idea.title.split(": "); title.append(document.createTextNode(parts[0]));
+  const parts = idea.title.split(": ");
+  title.append(document.createTextNode(parts[0]));
   if (parts.length > 1) { title.append(document.createElement("br")); const em = document.createElement("em"); em.textContent = parts.slice(1).join(": "); title.append(em); }
   $("#idea-description").textContent = idea.description;
   $("#idea-footnote").textContent = `FUENTES USADAS: ${idea.sources.join(" · ").toUpperCase()}`;
   $("#idea-doodle").textContent = rand(["✳", "↯", "☻", "※", "✷", "⊹", "?!", "∞"]);
   $("#source-status-text").textContent = `${idea.sources.length} FUENTES RESPONDIERON · DATOS REALES`;
-  $(".result-status").classList.add("live"); $("#copy-button").disabled = false; $("#save-button").disabled = false;
+  $(".result-status").classList.add("live");
+  $("#copy-button").disabled = false;
+  $("#save-button").disabled = false;
   const card = $("#idea-card"); card.classList.remove("is-loading", "is-refreshing"); void card.offsetWidth; card.classList.add("is-refreshing");
 }
+
 async function generate() {
   if (state.loading) return;
   state.loading = true;
-  const button = $("#generate-button"); button.disabled = true; button.querySelector("span:nth-child(2)").textContent = "CONSULTANDO EL CAOS…";
-  $("#idea-card").classList.add("is-loading"); $("#error-note").hidden = true; $("#source-status-text").textContent = "LLAMANDO A LAS APIS…"; $("#generation-hint").textContent = "Llamadas HTTP en marcha. Que sea lo que el servidor quiera.";
-  const mode = $("#mode").value; const absurdity = Number($("#absurdity").value);
-  const selected = pickSources(); let results = await Promise.all(selected.map(pull)); let successful = results.filter(r => r.ok && r.value);
+  const button = $("#generate-button");
+  button.disabled = true;
+  button.querySelector("span:nth-child(2)").textContent = "CONSULTANDO EL CAOS…";
+  $("#idea-card").classList.add("is-loading");
+  $("#error-note").hidden = true;
+  $("#source-status-text").textContent = "LLAMANDO A LAS APIS…";
+  $("#generation-hint").textContent = "Llamadas HTTP en marcha. Que sea lo que el servidor quiera.";
+  const mode = $("#mode").value;
+  const absurdity = Number($("#absurdity").value);
+  const selected = pickSources();
+  let results = await Promise.all(selected.map(pull));
+  let successful = results.filter(r => r.ok && r.value);
   if (successful.length < 2) {
-    const alreadyTried = new Set(results.map(r => r.source.id)); const extras = shuffle(SOURCES.filter(s => !alreadyTried.has(s.id))).slice(0, 5);
-    results = results.concat(await Promise.all(extras.map(pull))); successful = results.filter(r => r.ok && r.value);
+    const alreadyTried = new Set(results.map(r => r.source.id));
+    const extras = shuffle(SOURCES.filter(s => !alreadyTried.has(s.id))).slice(0, 5);
+    results = results.concat(await Promise.all(extras.map(pull)));
+    successful = results.filter(r => r.ok && r.value);
   }
-  state.lastResults = results; state.count++; updateSourceTiles(results);
+  state.lastResults = results;
+  state.count++;
+  updateSourceTiles(results);
   if (!successful.length) {
-    $("#source-status-text").textContent = "LAS APIS HAN HECHO GHOSTING"; $("#error-note").hidden = false; $("#error-note").textContent = "Ninguna fuente ha respondido con datos utilizables. Puede ser CORS, una caída temporal o la red. Prueba otra vez."; $("#generation-hint").textContent = "Sin datos reales, no hay humo creativo.";
+    $("#source-status-text").textContent = "LAS APIS HAN HECHO GHOSTING";
+    $("#error-note").hidden = false;
+    $("#error-note").textContent = "Ninguna fuente ha respondido con datos utilizables. Puede ser CORS, una caída temporal o la red. Prueba otra vez.";
+    $("#generation-hint").textContent = "Sin datos reales, no hay humo creativo.";
   } else {
-    state.current = buildIdea(successful, mode, absurdity); renderIdea(state.current);
-    const failed = results.length - successful.length; $("#generation-hint").textContent = failed ? `${successful.length} fuentes útiles · ${failed} han pasado de nosotros.` : "Las fuentes han respondido. El azar está de buen humor.";
+    state.current = buildIdea(successful, mode, absurdity);
+    renderIdea(state.current);
+    const failed = results.length - successful.length;
+    $("#generation-hint").textContent = failed ? `${successful.length} fuentes útiles · ${failed} han pasado de nosotros.` : "Las fuentes han respondido. El azar está de buen humor.";
   }
-  $("#idea-card").classList.remove("is-loading"); button.disabled = false; button.querySelector("span:nth-child(2)").textContent = "FABRICAR ABSURDO"; state.loading = false;
+  $("#idea-card").classList.remove("is-loading");
+  button.disabled = false;
+  button.querySelector("span:nth-child(2)").textContent = "FABRICAR ABSURDO";
+  state.loading = false;
 }
+
 function toast(message) { const el = $("#toast"); el.textContent = message; el.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove("show"), 2200); }
 function currentIdeaText(idea) { return `${idea.title}\n\n${idea.description}\n\nFuentes: ${idea.sources.join(", ")}\nGenerado por Aleatrón sin IA.`; }
 async function copyIdea() { if (!state.current) return; try { await navigator.clipboard.writeText(currentIdeaText(state.current)); toast("Idea copiada. Úsala con responsabilidad."); } catch { toast("No se pudo copiar automáticamente."); } }
@@ -142,11 +223,13 @@ function renderSaved() {
 }
 
 $("#generate-button").addEventListener("click", generate);
-$("#absurdity").addEventListener("input", event => { $("#absurdity-value").textContent = `${event.target.value}%`; });
+$("#absurdity").addEventListener("input", event => updateAbsurdity(event.target.value));
 $("#copy-button").addEventListener("click", copyIdea);
 $("#save-button").addEventListener("click", saveIdea);
 $("#clear-saved").addEventListener("click", () => { state.saved = []; writeSaved(); renderSaved(); toast("Archivo destruido. No quedan pruebas."); });
-$("#mode").addEventListener("change", () => { const hints = { caos: "Cada click es una mala decisión nueva.", historia: "Una premisa sin guionista que la frene.", personaje: "No todos los héroes tienen que ser útiles.", video: "La vergüenza ajena también es un formato.", mundo: "Worldbuilding sin comité de ética.", invento: "Soluciones a problemas que no existían." }; $("#generation-hint").textContent = hints[$("#mode").value]; });
+$("#mode").addEventListener("change", () => { const mode = modeInfo[$("#mode").value]; $("#mode-description").textContent = mode.hint; $("#generation-hint").textContent = mode.hint; });
 
+updateAbsurdity($("#absurdity").value);
+$("#mode-description").textContent = modeInfo[$("#mode").value].hint;
 updateSourceTiles();
 renderSaved();
