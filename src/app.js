@@ -3,7 +3,7 @@ import { MODE_INFO } from "./config/modes.js";
 import { pullSource } from "./services/api-client.js";
 import { buildIdea, pickSources } from "./core/generator.js";
 import { readSaved, writeSaved } from "./core/storage.js";
-import { $, } from "./utils.js";
+import { $ } from "./utils.js";
 import { renderIdea, renderMode, renderSaved, renderSources, updateAbsurdity } from "./ui/render.js";
 
 const state = {
@@ -60,46 +60,52 @@ async function generate() {
   }
 }
 
-$("#generate-button")?.addEventListener("click", generate);
+function init() {
+  $("#generate-button")?.addEventListener("click", generate);
+  $("#mode")?.addEventListener("change", renderMode);
+  $("#absurdity")?.addEventListener("input", event => updateAbsurdity(event.target.value));
 
-$("#mode")?.addEventListener("change", renderMode);
+  $("#copy-button")?.addEventListener("click", async () => {
+    if (!state.current) return;
+    try {
+      await navigator.clipboard.writeText(ideaAsText(state.current));
+      toast("Idea copiada.");
+    } catch {
+      toast("No se pudo copiar.");
+    }
+  });
 
-$("#absurdity")?.addEventListener("input", event => updateAbsurdity(event.target.value));
+  $("#save-button")?.addEventListener("click", () => {
+    if (!state.current) return;
+    if (state.saved.some(idea => idea.id === state.current.id)) {
+      toast("Esta idea ya está guardada.");
+      return;
+    }
+    state.saved.unshift(state.current);
+    writeSaved(state.saved);
+    renderSaved(state.saved, openSavedIdea);
+    toast("Idea guardada.");
+  });
 
-$("#copy-button")?.addEventListener("click", async () => {
-  if (!state.current) return;
-  try {
-    await navigator.clipboard.writeText(ideaAsText(state.current));
-    toast("Idea copiada.");
-  } catch {
-    toast("No se pudo copiar.");
-  }
-});
+  $("#clear-saved")?.addEventListener("click", () => {
+    state.saved = [];
+    writeSaved(state.saved);
+    renderSaved(state.saved, openSavedIdea);
+    toast("Archivo vaciado.");
+  });
 
-$("#save-button")?.addEventListener("click", () => {
-  if (!state.current) return;
-  if (state.saved.some(idea => idea.id === state.current.id)) {
-    toast("Esta idea ya está guardada.");
-    return;
-  }
-  state.saved.unshift(state.current);
-  writeSaved(state.saved);
+  renderMode();
+  updateAbsurdity($("#absurdity")?.value || 87);
   renderSaved(state.saved, openSavedIdea);
-  toast("Idea guardada.");
-});
-
-$("#clear-saved")?.addEventListener("click", () => {
-  state.saved = [];
-  writeSaved(state.saved);
-  renderSaved(state.saved, openSavedIdea);
-  toast("Archivo vaciado.");
-});
+}
 
 function openSavedIdea(idea) {
   renderIdea(idea, state);
   $("#idea-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
-renderMode();
-updateAbsurdity($("#absurdity")?.value || 87);
-renderSaved(state.saved, openSavedIdea);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init, { once: true });
+} else {
+  init();
+}
